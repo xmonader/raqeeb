@@ -5,6 +5,10 @@ from forepy.proc import Process
 import click
 import select
 import sys
+import signal
+
+
+
 
 class forepy:
 
@@ -17,6 +21,28 @@ class forepy:
         self.procfile.build_deps_graph()
         self._running_procs = {}
         self._procs = {}
+
+    def on_sigint(self, n, stack):
+        print("got int")
+        for p in self._running_procs.values():
+            p.send_signal(signal.SIGINT)
+
+    def on_sigterm(self, n, stack):
+        print("got term")
+
+        for p in self._running_procs.values():
+            p.terminate()
+
+    def on_sigstop(self, n, stack):
+        print("got sigstop")
+
+        for p in self._running_procs.values():
+            p.send_signal(signal.SIGSTOP)
+
+    def register_sighandlers(self):
+        signal.signal(signal.SIGTERM, self.on_sigterm)
+        signal.signal(signal.SIGINT, self.on_sigint)
+        # signal.signal(signal.SIGSTOP, self.on_sigstop)
 
     def prepare_procs(self):
         for proc_name, proc_info in self.procfile.processes_info.items():
@@ -36,6 +62,7 @@ class forepy:
         self.procfile.build_deps_graph()
 
     def run(self):
+        self.register_sighandlers()
         for proc_name in self._procs:
             print(f"starting {proc_name}")
             self._run_proc(proc_name)
