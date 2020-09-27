@@ -1,5 +1,6 @@
 import subprocess
 import socket
+import psutil
 
 def is_port_listening(port, type_="tcp"):
     """check if the port is being used by any process
@@ -18,7 +19,7 @@ def is_port_listening(port, type_="tcp"):
     else:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             result = s.connect_ex(("127.0.0.1", port))
-
+    # print(f"checking port {port} result was {result}")
     return result == 0
 
 
@@ -34,23 +35,40 @@ class Process:
         self.use_shell = use_shell
         self.proc_object = None
 
+    def __str__(self):
+        return f"Proc {self.cmd}, {self.cmd_check}, {self.tcp_ports}, {self.udp_ports}, {self.deps}"
+
     def is_running(self):
+        # DON'T RESTORE PSUTIL
+        print("checking pid: ", self.proc_object.pid)
+        # if not psutil.pid_exists(self.proc_object.pid):
+        #     return False
+        # print(self)
+        # print(f"checking command is running")
         if self.cmd_check:
+            # print(f"checking by command {self.cmd_check}")
             try:
                 res = subprocess.check_call(self.cmd, shell=True)
             except subprocess.CalledProcessError:
+                # print("not runnning..., cmd_check")
                 return False
             else:
+                # print("running...")
                 return True
         if self.tcp_ports:
             for p in self.tcp_ports:
+                # print("checking against tcp port ",p )
                 if not is_port_listening(p):
+                    # print("port reason")
                     return False
 
         if self.udp_ports:
             for p in self.udp_ports:
+                # print("checking against udp port ", p)
                 if not is_port_listening(p, "udp"):
+                    # print("port reason")
                     return False
+        # print(f"{self.cmd} is running.... correctly after checks")
         return True
 
 

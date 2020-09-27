@@ -1,15 +1,15 @@
 import re
 
 KV_RE = re.compile("([a-zA-Z][a-zA-Z0-9_]*)\s*=\s*(.+)")
-def loads(s):
+def loads_env(s):
     ms = KV_RE.findall(s)
     
     print(dict(ms))
     return dict(ms)
 
-def load(path):
+def load_env(path):
     with open(path) as f:
-        return loads(f.read())
+        return loads_env(f.read())
 
 
 if __name__ == '__main__':

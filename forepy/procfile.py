@@ -2,19 +2,19 @@ import re
 import yaml
 from .depsresolver import DepsResolver
 
-def loads(s):
+def loads_procfile(s):
     apps = yaml.load(s)
     print(apps)
     return apps
 
-def load(path):
+def load_procfile(path):
     with open(path) as f:
-        return loads(f.read())
+        return loads_procfile(f.read())
 
 class Procfile:
-    def __init__(self, content=None, filepath=None):
-        if filepath is not None:
-            with open(filepath) as f:
+    def __init__(self, content=None, path=None):
+        if path is not None:
+            with open(path) as f:
                 content = f.read()
         self._content = content
         self._loaded_content = {}
@@ -30,7 +30,7 @@ class Procfile:
         return self._tasks_deps
 
     def load_procs(self):
-        self._loaded_content = loads(self._content)
+        self._loaded_content = loads_procfile(self._content)
         return self._loaded_content
 
     def build_deps_graph(self):
@@ -69,9 +69,9 @@ if __name__ == '__main__':
 web: 
   cmd: node api.js 1000
   checks:
-    - tcp_ports: [1000]
-    - udp_port: []
-    - cmd: nc 1000
+    tcp_ports: [1000]
+    udp_port: []
+    cmd: nc 1000
   run_once: true
   deps:
      - redis
@@ -79,14 +79,14 @@ web:
 redis: 
   cmd: redis --port 15000
   checks:
-    - tcp_ports: [15000]
-    - cmd: nc -z 127.0.0.1 15000
+    tcp_ports: [15000]
+    cmd: nc -z 127.0.0.1 15000
 
   run_once: false
 
 """
 
-    loads(s)
+    loads_procfile(s)
     p = Procfile(s)
     print(p.build_deps_graph())
 

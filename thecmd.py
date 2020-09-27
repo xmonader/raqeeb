@@ -1,11 +1,12 @@
 from re import L
-from forepy.dotenv import load as load_env
-from forepy.procfile import load as load_procfile, Procfile
+from forepy.dotenv import load_env
+from forepy.procfile import load_procfile, loads_procfile, Procfile
 from forepy.proc import Process
 import click
 import select
 import sys
 import signal
+import time
 
 
 
@@ -17,7 +18,7 @@ class forepy:
         if dotenv_file_path:
             self.env = load_env(dotenv_file_path)
 
-        self.procfile = Procfile(filepath=procfile_path)
+        self.procfile = Procfile(path=procfile_path)
         self.procfile.build_deps_graph()
         self._running_procs = {}
         self._done_procs = {}
@@ -53,15 +54,20 @@ class forepy:
         for proc_name, proc_info in self.procfile.processes_info.items():
             print(proc_name, proc_info)
             cmd = proc_info.get('cmd')
-            use_shell = proc_info.get('use_shell', False)
+            use_shell = proc_info.get('use_shell', True)
             run_once  =  proc_info.get('run_once', False)
-            cmd_check = proc_info.get('cmd_check', '')
-            tcp_ports = proc_info.get('tcp_ports', [])
-            udp_ports = proc_info.get('udp_ports', [])
+            cmd_check = ''
+            tcp_ports = []
+            udp_ports = []
+            if "checks" in proc_info:
+                cmd_check = proc_info["checks"].get('cmd', '')
+                tcp_ports = proc_info["checks"].get('tcp_ports', [])
+                udp_ports = proc_info["checks"].get('udp_ports', [])
             deps = proc_info.get('deps', [])
             if not cmd:
                 raise ValueError(f"invalid proc ${proc_name} doesn't have cmd entry.")
             p = Process(cmd=cmd, use_shell=use_shell, env=self.env, run_once=run_once, cmd_check=cmd_check, tcp_ports=tcp_ports, udp_ports=udp_ports, deps=deps)
+            print(f"adding {proc_name} with {p}")
             self._procs[proc_name] = p
 
         self.procfile.build_deps_graph()
@@ -76,8 +82,8 @@ class forepy:
         proc = self._procs[proc_name]
         deps = proc.deps
         for d in deps:
-            dep_p = self._procs[d]
-            self._run_proc(dep_p)
+            # dep_p = self._procs[d]
+            self._run_proc(d)
         self._running_procs[proc_name] = proc.run()
 
     def all_done(self):
@@ -85,14 +91,18 @@ class forepy:
     
     def process_chores(self):
         running_procs = self._running_procs.copy()
+        print(f"running procs {running_procs}")
         for p_name, p in running_procs.items():
-            if p.poll() is  not None:
+            # print(f"proc {p_name} poll: {p.poll()} , is running = {self._procs[p_name].is_running()}")
+            if not self._procs[p_name].is_running():
                 # it was finished
                 if self._procs[p_name].run_once:
+                    # print(p_name, " was supposed to run once so it's ok")
                     self._done_procs[p_name] = p
                     del self._running_procs[p_name]
                 else:
                     print(f"***respawning {p_name}..")
+                    print(self._procs[p_name])
                     self._running_procs[p_name] = self._procs[p_name].run()
 
     @property
@@ -106,7 +116,7 @@ class forepy:
 
     def start_watching(self):
         inputs = self.readers
-        while inputs and not self.all_done():
+        while inputs or not self.all_done():
             # print(self._running_procs)
             # print("all_done: ", self.all_done())
             # print([(x, x.closed, x.readable()) for x in inputs])
@@ -120,6 +130,7 @@ class forepy:
                 line = r.readline()
                 if line.strip():
                     print(line)
+            time.sleep(0.1)
             inputs = self.readers
 
 @click.command()
