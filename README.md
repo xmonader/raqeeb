@@ -1,6 +1,6 @@
 # forepy
 
-your favorite foreman implementation with extra goodies
+your favorite [foreman](https://github.com/ddollar/foreman) implementation with extra goodies
 
 ## .env file
 
@@ -19,18 +19,28 @@ And you can define services in `Procfile`
 ```
 app1:
     cmd: ping -c 1 google.com 
-    use_shell: true
     run_once: true
-    
+    checks:
+        cmd: ps aux | grep google
+    deps: 
+        - redis
 app2:
-    cmd: ping -c 2 yahoo.com
-    use_shell: true    
+    cmd: ping -c 50 yahoo.com
+    checks:
+        cmd: ps aux | grep google
+
+redis:
+    cmd: redis-server --port 6010
+    checks:
+        cmd: redis-cli -p 6010 ping
+        tcp_ports: [6010]
 ```
 
 Here we define two services
 
-- app1 service, that executes command `ping -c 1 google.com`, use_shell for shell syntax, and run_once to not respawn it if it ever dies
-- app2 service, executes `ping -c 2 yahoo.com` and when it's done it will respawn
+- app1 service, that executes command `ping -c 1 google.com`, and run_once to not respawn it if it ever dies we say it depends on `redis` service, so redis needs to execute first. and it's check command is checking for google in `ps aux` output
+- app2 service, executes `ping -c 50 yahoo.com` and when it's done it will respawn and it's check command is checking for yahoo in `ps aux` output
+- redis service starts redis on port 6010 and its check is checking for port 6010 to be listening and also there's a `redis-cli -p 6010 ping` check command to validate if redis ok
 
 
 ```
