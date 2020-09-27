@@ -33,6 +33,22 @@ Here we define two services
 - app2 service, executes `ping -c 2 yahoo.com` and when it's done it will respawn
 
 
+```
+starting app1
+starting app2
+b'PING yahoo.com (98.137.11.164) 56(84) bytes of data.\n'
+b'PING google.com (216.58.198.78) 56(84) bytes of data.\n'
+b'64 bytes from mrs09s08-in-f14.1e100.net (216.58.198.78): icmp_seq=1 ttl=116 time=155 ms\n'
+b'64 bytes from media-router-fp73.prod.media.vip.gq1.yahoo.com (98.137.11.164): icmp_seq=1 ttl=49 time=248 ms\n'
+b'64 bytes from media-router-fp73.prod.media.vip.gq1.yahoo.com (98.137.11.164): icmp_seq=2 ttl=49 time=265 ms\n'
+***respawning app2..
+b'PING yahoo.com (98.137.11.164) 56(84) bytes of data.\n'
+^Cgot int
+```
+
+see the `**respawning app2`?
+
+
 
 more advanced examples
 ```

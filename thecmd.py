@@ -92,7 +92,7 @@ class forepy:
                     self._done_procs[p_name] = p
                     del self._running_procs[p_name]
                 else:
-                    print(f"***respawing {p_name}..")
+                    print(f"***respawning {p_name}..")
                     self._running_procs[p_name] = self._procs[p_name].run()
 
     @property
