@@ -21,6 +21,7 @@ class Procfile:
         self._depsresolver = None
         self._tasks_deps = {}
 
+
     @property
     def processes_info(self):
         return self._loaded_content

@@ -1,22 +1,79 @@
-from re import L
-from forepy.dotenv import load_env
-from forepy.procfile import load_procfile, loads_procfile, Procfile
-from forepy.proc import Process
-import click
+import logging
+import os
 import select
-import sys
 import signal
+import sys
 import time
+from re import L
 
+import click
+import redis
+
+from forepy.config import load_config
+from forepy.dotenv import load_env
+from forepy.proc import Process
+from forepy.procfile import Procfile, load_procfile, loads_procfile
+
+
+class Sink:
+    def log(self, m):
+        pass
+
+class StdoutSink(Sink):
+    def __init__(self, sinfo):
+        self.sinfo = sinfo
+        self._name = sinfo['name']
+        self.logger = logging.getLogger(self._name)
+        self.logger.setLevel(logging.DEBUG)
+
+    def log(self, m):
+        print("lgggo")
+
+        self.logger.debug(m)
+
+class FilesystemSink(Sink):
+    def __init__(self, sinfo):
+        self.sinfo = sinfo
+        self._name = sinfo['name']
+        self._path = sinfo.get('path', "")
+        fh = logging.FileHandler(os.path.join(self._path, f"{self._name}.log"))
+        fh.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger(self._name)
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(fh)
+
+
+    def log(self, m):
+        print("lgggo")
+        self.logger.debug(m)
+
+class RedisSink(Sink):
+    def __init__(self, sinfo):
+        self.sinfo = sinfo
+        self.r = redis.Redis(host=sinfo['host'], port=sinfo['port'])
+
+    def log(self, m):
+        print("logging to redis...", m)
+        
+
+
+
+def sink_from_info(sinfo):
+    if sinfo['type'] == "stdout":
+        return StdoutSink(sinfo)
+    elif sinfo['type'] == 'filesystem':
+        return FilesystemSink(sinfo)
+    elif sinfo['type'] == 'redis':
+        return RedisSink(sinfo)
 
 
 
 class forepy:
 
-    def __init__(self, dotenv_file_path=None, procfile_path=None):
+    def __init__(self, dotenv_path=None, procfile_path=None, config_path=None):
         self.env = {}
-        if dotenv_file_path:
-            self.env = load_env(dotenv_file_path)
+        if dotenv_path:
+            self.env = load_env(dotenv_path)
 
         self.procfile = Procfile(path=procfile_path)
         self.procfile.build_deps_graph()
@@ -24,6 +81,39 @@ class forepy:
         self._done_procs = {}
         self._procs = {}
 
+        self._config = {}
+        if config_path:
+            self.set_config(load_config(config_path))
+        
+        self.__sinks = {}
+
+    def push_to_sink(self, sink_name, m):
+        print(self._sinks)
+        print(f"pushing {m} to sink {sink_name}")
+        self._sinks[sink_name].log(m)
+
+    def set_config(self, config):
+        self._config = config
+
+    def _get_sinks_config(self):
+        if not self._config:
+            return {'stdout': {'type': 'stdout'}}
+        else:
+            return self._config['sinks']
+
+    @property
+    def _sinks(self):
+        if not self.__sinks:
+            sinks_config = self._get_sinks_config()
+            
+            for sink_name, sink_info in sinks_config.items():
+                s = sink_from_info(sink_info)
+                self.__sinks[sink_name] = s
+        return self.__sinks
+
+    
+
+    
     def on_sigint(self, n, stack):
         print("got int")
         for p in self._running_procs.values():
@@ -64,9 +154,13 @@ class forepy:
                 tcp_ports = proc_info["checks"].get('tcp_ports', [])
                 udp_ports = proc_info["checks"].get('udp_ports', [])
             deps = proc_info.get('deps', [])
+            if "log" in proc_info:
+                log_sinks = proc_info["log"]
+            else:
+                log_sinks = None
             if not cmd:
                 raise ValueError(f"invalid proc ${proc_name} doesn't have cmd entry.")
-            p = Process(cmd=cmd, use_shell=use_shell, env=self.env, run_once=run_once, cmd_check=cmd_check, tcp_ports=tcp_ports, udp_ports=udp_ports, deps=deps)
+            p = Process(cmd=cmd, use_shell=use_shell, env=self.env, run_once=run_once, cmd_check=cmd_check, tcp_ports=tcp_ports, udp_ports=udp_ports, deps=deps, log_sinks=log_sinks)
             print(f"adding {proc_name} with {p}")
             self._procs[proc_name] = p
 
@@ -109,17 +203,27 @@ class forepy:
     def readers(self):
         self.process_chores()
 
-        stdoutreaders = [p.stdout for p in self._running_procs.values()]
-        stderrreaders = [p.stderr for p in self._running_procs.values()]
-        inputs = [*stdoutreaders, *stderrreaders]
-        return inputs
+        inputs = []
+        readers_to_procs = {}
+        for p_name, popen in self._running_procs.items():
+            inputs.append(popen.stdout)
+            readers_to_procs[popen.stdout.fileno()] = self._procs[p_name]
+            inputs.append(popen.stderr)
+            readers_to_procs[popen.stderr.fileno()] = self._procs[p_name]
+            
+
+        return inputs, readers_to_procs
 
     def start_watching(self):
-        inputs = self.readers
+        # pass/
+        inputs, readers_to_procs = self.readers
+
+
         while inputs or not self.all_done():
             # print(self._running_procs)
             # print("all_done: ", self.all_done())
-            # print([(x, x.closed, x.readable()) for x in inputs])
+            print("inputs: ", inputs)
+            print("readers to procs: ", readers_to_procs)
             inputs = [x for x in inputs if not x.closed]
             # print("now inputs are: ", inputs)
             # Wait for at least one of the sockets to be
@@ -129,24 +233,28 @@ class forepy:
             for r in readable:
                 line = r.readline()
                 if line.strip():
-                    print(line)
+                    sinks = readers_to_procs[r.fileno()].log_sinks
+                    for sink_name in sinks:
+                        self.push_to_sink(sink_name, line)
+                    # print(line)
             time.sleep(0.1)
-            inputs = self.readers
+            inputs, readers_to_procs = self.readers
+
 
 @click.command()
 @click.option('--procfile', type=click.Path(exists=True, readable=True), help="procfile path")
 @click.option('--envfile', type=click.Path(exists=True, readable=True), help=".env file path")
-def run(procfile, envfile):
+@click.option('--configfile', type=click.Path(exists=True, readable=True), help="config file path")
+def run(procfile, envfile, configfile=None):
     """Entrypoint for badass forepy."""
     print(procfile, envfile)
-    thecmd = forepy(dotenv_file_path=envfile, procfile_path=procfile)
+    thecmd = forepy(dotenv_path=envfile, procfile_path=procfile, config_path=configfile)
     thecmd.prepare_procs()
     print(thecmd)
     print(thecmd._procs)
     thecmd.run()
     thecmd.start_watching()
 
-    print("hello")
 
 if __name__ == '__main__':
     run()
