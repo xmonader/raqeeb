@@ -41,7 +41,7 @@ class Process:
 
     def is_running(self):
         # DON'T RESTORE PSUTIL
-        print("checking pid: ", self.proc_object.pid)
+        # print("checking pid: ", self.proc_object.pid)
         # if not psutil.pid_exists(self.proc_object.pid):
         #     return False
         # print(self)
@@ -49,7 +49,7 @@ class Process:
         if self.cmd_check:
             # print(f"checking by command {self.cmd_check}")
             try:
-                res = subprocess.check_call(self.cmd, shell=True)
+                res = subprocess.check_call(self.cmd_check, shell=True, stdout=subprocess.DEVNULL)
             except subprocess.CalledProcessError:
                 # print("not runnning..., cmd_check")
                 return False

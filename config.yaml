@@ -1,0 +1,15 @@
+sinks:
+  stdout:
+      type: stdout
+      name: thecmd
+
+  redis:
+      type: redis
+      host: 127.0.0.1
+      port: 6379
+      name: thecmd
+    
+  filesystem:
+      type: filesystem
+      path: /tmp
+      name: thecmd

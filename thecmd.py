@@ -185,7 +185,7 @@ class forepy:
     
     def process_chores(self):
         running_procs = self._running_procs.copy()
-        print(f"running procs {running_procs}")
+        # print(f"running procs {running_procs}")
         for p_name, p in running_procs.items():
             # print(f"proc {p_name} poll: {p.poll()} , is running = {self._procs[p_name].is_running()}")
             if not self._procs[p_name].is_running():
@@ -196,7 +196,7 @@ class forepy:
                     del self._running_procs[p_name]
                 else:
                     print(f"***respawning {p_name}..")
-                    print(self._procs[p_name])
+                    # print(self._procs[p_name])
                     self._running_procs[p_name] = self._procs[p_name].run()
 
     @property
@@ -215,15 +215,13 @@ class forepy:
         return inputs, readers_to_procs
 
     def start_watching(self):
-        # pass/
         inputs, readers_to_procs = self.readers
-
 
         while inputs or not self.all_done():
             # print(self._running_procs)
             # print("all_done: ", self.all_done())
-            print("inputs: ", inputs)
-            print("readers to procs: ", readers_to_procs)
+            # print("inputs: ", inputs)
+            # print("readers to procs: ", readers_to_procs)
             inputs = [x for x in inputs if not x.closed]
             # print("now inputs are: ", inputs)
             # Wait for at least one of the sockets to be
@@ -237,7 +235,7 @@ class forepy:
                     for sink_name in sinks:
                         self.push_to_sink(sink_name, line)
                     # print(line)
-            time.sleep(0.1)
+            time.sleep(0.01)
             inputs, readers_to_procs = self.readers
 
 
@@ -251,7 +249,7 @@ def run(procfile, envfile, configfile=None):
     thecmd = forepy(dotenv_path=envfile, procfile_path=procfile, config_path=configfile)
     thecmd.prepare_procs()
     print(thecmd)
-    print(thecmd._procs)
+    # print(thecmd._procs)
     thecmd.run()
     thecmd.start_watching()
 
