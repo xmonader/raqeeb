@@ -27,8 +27,6 @@ class StdoutSink(Sink):
         self.logger.setLevel(logging.DEBUG)
 
     def log(self, m):
-        print("lgggo")
-
         self.logger.debug(m)
 
 class FilesystemSink(Sink):
@@ -44,19 +42,17 @@ class FilesystemSink(Sink):
 
 
     def log(self, m):
-        print("lgggo")
         self.logger.debug(m)
 
 class RedisSink(Sink):
     def __init__(self, sinfo):
         self.sinfo = sinfo
+        self._name = sinfo['name']
         self.r = redis.Redis(host=sinfo['host'], port=sinfo['port'])
 
     def log(self, m):
-        print("logging to redis...", m)
+        self.r.rpush(self._name, m)
         
-
-
 
 def sink_from_info(sinfo):
     if sinfo['type'] == "stdout":

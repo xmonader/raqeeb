@@ -8,9 +8,16 @@ app1:
     # log:
     #     - stdout
 app2:
-    cmd: ping -c 4 yahoo.com
+    cmd: ping -c 50 yahoo.com
     checks:
-        cmd: ps aux | grep google
+        cmd: ps aux | grep yahoo
+    log:
+        - stdout
+        - redis
+app3:
+    cmd: ping -c 50 facebook.com
+    checks:
+        cmd: ps aux | grep facebook
     log:
         - stdout
         - redis
