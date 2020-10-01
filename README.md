@@ -1,6 +1,6 @@
-# forepy
+# raqeeb
 
-your favorite [foreman](https://github.com/ddollar/foreman) implementation with extra goodies
+Raqeeb (Arabic word means the watcher) your favorite [foreman](https://github.com/ddollar/foreman) implementation with extra goodies
 
 ## .env file
 
