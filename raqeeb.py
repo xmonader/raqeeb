@@ -9,58 +9,12 @@ from re import L
 import click
 import redis
 
-from forepy.config import load_config
-from forepy.dotenv import load_env
-from forepy.proc import Process
-from forepy.procfile import Procfile, load_procfile, loads_procfile
+from raqeeb.config import load_config
+from raqeeb.dotenv import load_env
+from raqeeb.proc import Process
+from raqeeb.procfile import Procfile, load_procfile, loads_procfile
+from raqeeb.sinks import StdoutSink, RedisSink, FilesystemSink, sink_from_info
 
-
-class Sink:
-    def log(self, m):
-        pass
-
-class StdoutSink(Sink):
-    def __init__(self, sinfo):
-        self.sinfo = sinfo
-        self._name = sinfo['name']
-        self.logger = logging.getLogger(self._name)
-        self.logger.setLevel(logging.DEBUG)
-
-    def log(self, m):
-        self.logger.debug(m)
-
-class FilesystemSink(Sink):
-    def __init__(self, sinfo):
-        self.sinfo = sinfo
-        self._name = sinfo['name']
-        self._path = sinfo.get('path', "")
-        fh = logging.FileHandler(os.path.join(self._path, f"{self._name}.log"))
-        fh.setLevel(logging.DEBUG)
-        self.logger = logging.getLogger(self._name)
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(fh)
-
-
-    def log(self, m):
-        self.logger.debug(m)
-
-class RedisSink(Sink):
-    def __init__(self, sinfo):
-        self.sinfo = sinfo
-        self._name = sinfo['name']
-        self.r = redis.Redis(host=sinfo['host'], port=sinfo['port'])
-
-    def log(self, m):
-        self.r.rpush(self._name, m)
-        
-
-def sink_from_info(sinfo):
-    if sinfo['type'] == "stdout":
-        return StdoutSink(sinfo)
-    elif sinfo['type'] == 'filesystem':
-        return FilesystemSink(sinfo)
-    elif sinfo['type'] == 'redis':
-        return RedisSink(sinfo)
 
 
 
@@ -240,7 +194,7 @@ class forepy:
 @click.option('--envfile', type=click.Path(exists=True, readable=True), help=".env file path")
 @click.option('--configfile', type=click.Path(exists=True, readable=True), help="config file path")
 def run(procfile, envfile, configfile=None):
-    """Entrypoint for badass forepy."""
+    """Entrypoint for badass raqeeb."""
     print(procfile, envfile)
     thecmd = forepy(dotenv_path=envfile, procfile_path=procfile, config_path=configfile)
     thecmd.prepare_procs()
