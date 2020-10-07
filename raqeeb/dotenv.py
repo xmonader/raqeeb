@@ -21,4 +21,4 @@ A_B = 7
 $$ = 11
 """
 
-    loads(s)
+    loads_env(s)

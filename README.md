@@ -1,6 +1,6 @@
-# forepy
+# raqeeb
 
-your favorite [foreman](https://github.com/ddollar/foreman) implementation with extra goodies
+Raqeeb (Arabic word means the watcher) your favorite [foreman](https://github.com/ddollar/foreman) implementation with extra goodies
 
 ## .env file
 
@@ -16,7 +16,7 @@ FAV_NUM=50
 
 And you can define services in `Procfile`
 
-```
+```yaml
 app1:
     cmd: ping -c 1 google.com 
     run_once: true
@@ -61,7 +61,7 @@ see the `**respawning app2`?
 
 
 more advanced examples
-```
+```yaml
 web: 
   cmd: node api.js 1000
   checks:
@@ -86,6 +86,65 @@ Here you can define your dependencies so `redis` service will have to execute be
 - tcp_port : checks if certain set of tcp ports been taken
 - udp_port : checks if certain set of udp ports been taken
 
+
+
+##  Sinks
+when starting forepy you can define sinks in the  config.yaml file.
+
+example 
+```yaml
+sinks:
+  stdout:
+      type: stdout
+      name: thecmd
+
+  redis:
+      type: redis
+      host: 127.0.0.1
+      port: 6379
+      name: thecmd
+    
+  filesystem:
+      type: filesystem
+      path: /tmp
+      name: thecmd
+```
+
+Currently we support different kinds of sinks for
+
+- stdout: just see the output in forepy console
+- filesystem: logs in the filesystem  in $path/$name.log
+- redis: logs in redis (requires redis info) (still in progress)
+
+And to use logging sink for your service, all you need to do is use the log section for your service config, here's an example:
+
+```yaml
+app1:
+    cmd: ping -c 1 google.com 
+    run_once: true
+    checks:
+        cmd: ps aux | grep google
+    deps: 
+        - redis
+    log:
+        - stdout
+app2:
+    cmd: ping -c 4 yahoo.com
+    checks:
+        cmd: ps aux | grep google
+    log:
+        - stdout
+        - redis
+
+redis:
+    cmd: redis-server --port 6010
+    checks:
+        cmd: redis-cli -p 6010 ping
+        tcp_ports: [6010]
+    log:
+        - stdout
+
+```
 
 ## todo
 add more sinks, e.g redis, log stash, check python buffering

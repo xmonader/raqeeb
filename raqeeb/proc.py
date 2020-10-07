@@ -24,7 +24,7 @@ def is_port_listening(port, type_="tcp"):
 
 
 class Process:
-    def __init__(self, cmd, use_shell=False, env=None, run_once=False, cmd_check="", tcp_ports=None, udp_ports=None, deps=None ):
+    def __init__(self, cmd, use_shell=False, env=None, run_once=False, cmd_check="", tcp_ports=None, udp_ports=None, deps=None, log_sinks=None ):
         self.cmd = cmd
         self.env = env or {}
         self.cmd_check = cmd_check
@@ -34,13 +34,14 @@ class Process:
         self.deps = deps or [] 
         self.use_shell = use_shell
         self.proc_object = None
+        self.log_sinks = log_sinks or []
 
     def __str__(self):
         return f"Proc {self.cmd}, {self.cmd_check}, {self.tcp_ports}, {self.udp_ports}, {self.deps}"
 
     def is_running(self):
         # DON'T RESTORE PSUTIL
-        print("checking pid: ", self.proc_object.pid)
+        # print("checking pid: ", self.proc_object.pid)
         # if not psutil.pid_exists(self.proc_object.pid):
         #     return False
         # print(self)
@@ -48,7 +49,7 @@ class Process:
         if self.cmd_check:
             # print(f"checking by command {self.cmd_check}")
             try:
-                res = subprocess.check_call(self.cmd, shell=True)
+                res = subprocess.check_call(self.cmd_check, shell=True, stdout=subprocess.DEVNULL)
             except subprocess.CalledProcessError:
                 # print("not runnning..., cmd_check")
                 return False
@@ -70,7 +71,6 @@ class Process:
                     return False
         # print(f"{self.cmd} is running.... correctly after checks")
         return True
-
 
     def run(self):
         p = subprocess.Popen(self.cmd, shell=self.use_shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
