@@ -73,6 +73,6 @@ class Process:
         return True
 
     def run(self):
-        p = subprocess.Popen(self.cmd, shell=self.use_shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(self.cmd, shell=self.use_shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env)
         self.proc_object = p
         return p
