@@ -27,7 +27,7 @@ app1:
 app2:
     cmd: ping -c 50 yahoo.com
     checks:
-        cmd: ps aux | grep google
+        cmd: ps aux | grep yahoo
 
 redis:
     cmd: redis-server --port 6010
