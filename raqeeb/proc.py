@@ -1,3 +1,4 @@
+import os
 import subprocess
 import socket
 import psutil
@@ -46,22 +47,20 @@ class Process:
         #     return False
         # print(self)
         # print(f"checking command is running")
-        if self.cmd_check:
-            # print(f"checking by command {self.cmd_check}")
-            try:
-                res = subprocess.check_call(self.cmd_check, shell=True, stdout=subprocess.DEVNULL)
-            except subprocess.CalledProcessError:
-                # print("not runnning..., cmd_check")
-                return False
-            else:
-                # print("running...")
-                return True
+        # if self.cmd_check:
+        #     # print(f"checking by command {self.cmd_check}")
+
+        #     res = subprocess.run(self.cmd_check.split(), shell=True, capture_output=False, stdout=subprocess.DEVNULL)
+        #     print("RES :" , res)
+        #     return res.returncode == 1
+  
         if self.tcp_ports:
             for p in self.tcp_ports:
                 # print("checking against tcp port ",p )
                 if not is_port_listening(p):
                     # print("port reason")
                     return False
+            return True
 
         if self.udp_ports:
             for p in self.udp_ports:
@@ -69,8 +68,12 @@ class Process:
                 if not is_port_listening(p, "udp"):
                     # print("port reason")
                     return False
+            return True
         # print(f"{self.cmd} is running.... correctly after checks")
-        return True
+        if self.proc_object:
+            return not self.proc_object.poll()
+
+        return False
 
     def run(self):
         p = subprocess.Popen(self.cmd, shell=self.use_shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env)

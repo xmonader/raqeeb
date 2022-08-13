@@ -38,7 +38,7 @@ class forepy:
         self.__sinks = {}
 
     def push_to_sink(self, sink_name, m):
-        print(self._sinks)
+        # print(self._sinks)
         print(f"pushing {m} to sink {sink_name}")
         self._sinks[sink_name].log(m)
 
@@ -70,12 +70,15 @@ class forepy:
             p.send_signal(signal.SIGINT)
         exit()
 
-    def on_sigterm(self, n, stack):
-        print("got term")
-
+    def _terminate(self):
         for p in self._running_procs.values():
             p.terminate()
         exit()
+    
+    def on_sigterm(self, n, stack):
+        print("got term")
+        self._terminate()
+
 
     def on_sigstop(self, n, stack):
         print("got sigstop")
@@ -112,8 +115,10 @@ class forepy:
                 raise ValueError(f"invalid proc ${proc_name} doesn't have cmd entry.")
             p = Process(cmd=cmd, use_shell=use_shell, env=self.env, run_once=run_once, cmd_check=cmd_check, tcp_ports=tcp_ports, udp_ports=udp_ports, deps=deps, log_sinks=log_sinks)
             print(f"adding {proc_name} with {p}")
-            self._procs[proc_name] = p
-
+            if p.is_running:
+                self._procs[proc_name] = p
+            else:
+                print(f"process {proc_name} failed to start.")
         self.procfile.build_deps_graph()
 
     def run(self):

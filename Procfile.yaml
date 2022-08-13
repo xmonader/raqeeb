@@ -2,30 +2,44 @@ app1:
     cmd: ping -c 1 google.com 
     run_once: true
     checks:
-        cmd: ps aux | grep google
+        cmd: ps aux | grep google | grep -v grep | echo $?
     deps: 
-        - redis
+        - redis1
     # log:
     #     - stdout
 app2:
-    cmd: ping -c 50 yahoo.com
+    cmd: ping -c 5 yahoo.com
     checks:
-        cmd: ps aux | grep yahoo
+        cmd: ps aux | grep yahoo | grep -v grep | echo $?
     log:
         - stdout
-        - redis
+        # - redis
 app3:
-    cmd: ping -c 50 facebook.com
+    cmd: ping facebook.com
     checks:
-        cmd: ps aux | grep facebook
+        cmd: ps aux | grep faecbook | grep -v grep | echo $?
     log:
         - stdout
-        - redis
+        - filesystem
 
-redis:
+app4: 
+    cmd: sleep infinity
+    checks:
+        cmd: ps aux | grep sleep | grep -v grep | echo $?
+    log:
+        - stdout
+
+redis1:
     cmd: redis-server --port 6010
     checks:
-        cmd: redis-cli -p 6010 ping
+        # cmd: redis-cli -P 6010 ping
         tcp_ports: [6010]
+    log:
+        - stdout
+redis2:
+    cmd: redis-server --port 6011
+    checks:
+        # cmd: redis-cli -P 6011 ping
+        tcp_ports: [6011]
     log:
         - stdout
